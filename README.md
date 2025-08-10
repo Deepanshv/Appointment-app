@@ -26,7 +26,7 @@ appointment-app/
 
 * **Frontend**: React, React Router, Axios
 * **Backend**: Node.js, Express
-* **Database**: (Add your DB here, e.g., MongoDB / PostgreSQL)
+* **Database**: PostgreSQL
 * **Hosting**: Vercel (frontend), Render (backend)
 
 ---
