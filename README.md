@@ -1,127 +1,81 @@
-# Appointment App
+Appointment Booking App
+A full-stack appointment booking application featuring a secure REST API and a React frontend. It allows patients to book appointments and administrators to manage them, with a focus on preventing double bookings and providing clear role-based access.
 
-A full-stack appointment booking application with a **Node.js/Express backend** (hosted on Render) and a **React frontend** (hosted on Vercel).
-The app allows users to create accounts, log in, and manage appointments.
+Submission Checklist
+Frontend URL: https://appointment-app-deepanshv.vercel.app (Replace with your URL)
 
-## 🚀 Live Demo
+API URL: https://appointment-app-api-deepanshv.onrender.com (Replace with your URL)
 
-* **Frontend (Vercel)**: [Visit App](https://appointment-ce6en21mi-deepanshvs-projects.vercel.app)
-* **Backend/API (Render)**: [API Base URL](https://appointment-app-9hg0.onrender.com)
+Repo URL: https://github.com/Deepanshv/Appointment-app
 
----
+Admin: admin@example.com / Passw0rd!
 
-## 📂 Project Structure
+Patient: patient@example.com / Passw0rd! (Must be registered first)
 
-```
-appointment-app/
-│
-├── backend/          # Express.js server, routes, controllers
-├── frontend/         # React app (Vite/CRA/Next.js)
-└── README.md
-```
+Run locally: Steps are included below.
 
----
+Postman/curl steps included: A cURL verification script is included below.
 
-## ⚙️ Tech Stack
+Notes on trade-offs & next steps: Included at the end.
 
-* **Frontend**: React, React Router, Axios
-* **Backend**: Node.js, Express
-* **Database**: PostgreSQL
-* **Hosting**: Vercel (frontend), Render (backend)
+Tech Stack
+This project uses a React (Vite) frontend, a Node.js/Express backend, and a PostgreSQL database managed with the Prisma ORM. This stack was chosen for its rapid development capabilities, strong ecosystem, and excellent free tiers for deployment on Vercel and Render.
 
----
+How to Run Locally
+1. Clone Repository:
 
-## 🔧 Installation & Setup
+Bash
 
-### 1️⃣ Clone the Repository
-
-```bash
 git clone https://github.com/Deepanshv/Appointment-app.git
 cd Appointment-app
-```
+2. Setup Backend (/api):
 
----
+Bash
 
-### 2️⃣ Backend Setup (Render)
-
-```bash
-cd backend
+cd api
 npm install
+# Add DATABASE_URL and JWT_SECRET to a new .env file
+npx prisma migrate dev
+npm run seed
 npm run dev
-```
+(API runs on http://localhost:3001)
 
-* Runs on `http://localhost:5000` by default.
-* Configure your `.env` file:
+3. Setup Frontend (/client):
 
-```env
-PORT=5000
-MONGO_URI=your_database_url
-JWT_SECRET=your_secret
-```
+Bash
 
----
-
-### 3️⃣ Frontend Setup (Vercel)
-
-```bash
-cd frontend
+# In a new terminal
+cd client
 npm install
+# Ensure .env.local has VITE_API_URL=http://localhost:3001/api
 npm run dev
-```
+(Frontend runs on http://localhost:5173)
 
-* Runs on `http://localhost:3000` by default.
-* Create a `.env` file:
+Architecture Notes
+Authentication: Handled via stateless JWTs containing the user's role, stored in localStorage. Middleware on the backend protects routes and verifies roles.
 
-```env
-VITE_API_URL=https://appointment-app-9hg0.onrender.com
-```
+Booking Concurrency: Double-booking is prevented atomically at the database level using a @unique constraint on the slotId. The API catches the specific database error and returns a 409 Conflict status.
 
----
+Time Zones: All dates are handled in UTC on the backend to ensure consistency. The frontend is responsible for formatting times to the user's local timezone.
 
-## 🌐 Deployment
+Quick Verification Script (cURL)
+Bash
 
-### **Backend on Render**
+# Set your live API URL after deployment
+API_URL="https://appointment-app-api-deepanshv.onrender.com/api"
 
-1. Push the backend folder to a separate branch/repo if needed.
-2. Create a new **Web Service** on Render.
-3. Set **Start Command**:
+echo "### 1. Registering a new patient..."
+curl -s -X POST "$API_URL/register" -H "Content-Type: application/json" -d '{"name":"Test Patient","email":"testcurl@example.com","password":"Password123"}' | jq
 
-   ```bash
-   npm start
-   ```
-4. Add environment variables in Render dashboard.
+echo "\n### 2. Logging in and capturing token..."
+TOKEN=$(curl -s -X POST "$API_URL/login" -H "Content-Type: application/json" -d '{"email":"testcurl@example.com","password":"Password123"}' | jq -r '.token')
+echo "Token captured."
 
-### **Frontend on Vercel**
+echo "\n### 3. Getting and booking the first available slot..."
+SLOT_ID=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/slots" | jq -r '.[0].id')
+curl -s -X POST "$API_URL/book" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d "{\"slotId\":\"$SLOT_ID\"}" | jq
 
-1. Import the frontend project into Vercel.
-2. Add the `VITE_API_URL` in Vercel Environment Variables.
-3. If using React Router (SPA), create a `vercel.json`:
-
-```json
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
-```
-
----
-
-## 📌 API Endpoints
-
-| Method | Endpoint             | Description          |
-| ------ | -------------------- | -------------------- |
-| POST   | `/api/auth/register` | Register user        |
-| POST   | `/api/auth/login`    | User login           |
-| GET    | `/api/appointments`  | Get all appointments |
-| POST   | `/api/appointments`  | Create appointment   |
-
----
-
-## 🛠️ Development Notes
-
-* Use **CORS** in backend to allow frontend API requests.
-* Always test locally before deploying.
-* Backend and frontend can be developed separately using different ports.
-
----
+echo "\n### 4. Verifying 'My Bookings'..."
+curl -s -H "Authorization: Bearer $TOKEN" "$API_URL/my-bookings" | jq
+Notes on Trade-offs & Next Steps
+Due to the time constraint, automated tests were omitted in favor of delivering core functionality. The UI is minimal but functional. With two more hours, I would prioritize adding integration tests for the API, implementing a patient-facing cancellation feature, and refining the UI with a calendar view.
